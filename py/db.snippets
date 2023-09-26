@@ -1,0 +1,82 @@
+extends py
+
+snippet db
+        import os
+        import argparse
+        import pyodbc
+        import ibm_db
+        import ibm_db_dbi
+
+
+        def parse_args():
+            parser = argparse.ArgumentParser(
+                description="execute query against sqlserver or db database")
+            parser.add_argument(
+                "server", help="e.g. EXAMPLE\\EXAMPLE1 or example1:4444")
+            parser.add_argument("db", help="dabase_name")
+            parser.add_argument(
+                "query", help="query to be executed against the given database")
+            parser.add_argument('-p', '--print', action='store_true',
+                                help='Print results in stdout')
+            return parser.parse_args()
+
+
+        def run(server, database, queries, print_results=False, current_os="windows"):
+            db_username = os.getlogin()
+            db_password = 'DB_SQLSERVER_PASS'
+
+            # db2
+            if ":" in server:
+                server_port = server.split(":")
+                con_str = f'database={database};hostname={server_port[0]};port={server_port[1]};protocol=tcpip;uid={db_username};pwd={db_password}'
+                ibm_db_conn = ibm_db.connect(con_str, '', '')
+                con = ibm_db_dbi.Connection(ibm_db_conn)
+            # sqlserver
+            else:
+                if current_os == "windows":
+                    # windows
+                    con = pyodbc.connect(
+                        driver="{ODBC Driver 13 for SQL Server}",
+                        server=server,
+                        database=database,
+                        trusted_connection="yes"
+                    )
+                else:
+                    # linux
+                    con = pyodbc.connect(
+                        driver="{ODBC Driver 18 for SQL Server}",
+                        server=server,
+                        database=database,
+                        TrustServerCertificate="yes",
+                        trusted_connection="no",
+                        UID="AD_DOMAIN\\" + db_username,
+                        PWD=db_password,
+                        encript="yes",
+                        authentication="SqlPassword",
+                    )
+
+            cursor = con.cursor()
+
+            results = []
+            columns = []
+
+            for query in queries:
+                results.append(cursor.execute(query).fetchall())
+                descriptions = [description[0] for description in cursor.description]
+                columns.append(descriptions)
+
+            cursor.close()
+            con.close()
+
+            if print_results:
+                print(results)
+            return columns, results
+
+
+        def main():
+            args = parse_args()
+            return run(args.server, args.database, args.print_results, [args.query])
+
+
+        if __name__ == "__main__":
+            main()
