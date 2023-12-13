@@ -1,0 +1,19 @@
+snippet fill_ram
+        import os
+        import sys
+
+        def consume_memory():
+            # Get the total memory in bytes
+            total_memory = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+
+            # Calculate desired % of the total memory
+            memory_to_consume = total_memory * 0.5
+
+            # Create a list and continuously append to it, consuming memory
+            memory = bytearray(int(memory_to_consume))
+
+            while True:
+                pass
+
+        # Call the function
+        consume_memory()
